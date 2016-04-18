@@ -63,7 +63,7 @@ static void GreenLEDtask(void *pvargs);
 static void Serialtask(void *pvargs);
 
 /*----- Data ---------------------------------------------------------------*/
-
+SemaphoreHandle_t SemGPIO;
 /*----- Implementation -----------------------------------------------------*/
 /**
  * @brief		main
