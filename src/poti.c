@@ -19,6 +19,7 @@
 #include <carme_io2.h>
 #include <poti.h>
 #include <motor_pwm.h>
+
 void Poti_Init()
 {
 
@@ -29,7 +30,7 @@ for(;;)
 {
 	uint16_t ADCValue;
 	CARME_IO2_ADC_Get(CARME_IO2_ADC_PORT0,&ADCValue);
-	Motor_SetPWMValue(ADCValue%100);
+	Motor_SetPWMValue(100*ADCValue/1024);
 	vTaskDelay(100);
 }
 }

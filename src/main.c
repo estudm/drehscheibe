@@ -53,16 +53,24 @@
 #include <carme_io2.h>
 #include "gpio_ISR.h"
 #include "motor_pwm.h"
+#include "poti.h"
 
 /*----- Macros -------------------------------------------------------------*/
-
+#define INT_PRO_CHAR	(14)
+#define SPACENMBR (35)			//Zeichen Nummer 35 auf Rad ist Leerzeichen
+//#define PRESCALER (14)
+#define PRIORITY_CONTROLTASK (4)
+#define STACKSIZE_CONTROLTASK (128)
 /*----- Data types ---------------------------------------------------------*/
 
 /*----- Function prototypes ------------------------------------------------*/
-static void GreenLEDtask(void *pvargs);
+static void ControlTask(void *pvargs);
 static void Serialtask(void *pvargs);
 
 /*----- Data ---------------------------------------------------------------*/
+
+SemaphoreHandle_t  SemChanA;
+SemaphoreHandle_t  SemIndex;
 
 /*----- Implementation -----------------------------------------------------*/
 /**
@@ -73,13 +81,20 @@ int main(void) {
 
 	/* Ensure all priority bits are assigned as preemption priority bits. */
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4);
+	SemChanA=xSemaphoreCreateCounting(1,0);
+	SemIndex=xSemaphoreCreateCounting(1,0);
 
-	xTaskCreate(GreenLEDtask, "Blinky", 200U, NULL, 4U, NULL);
-	xTaskCreate(Serialtask, "Serial", 1024U, NULL, 4U, NULL);
+
 	CARME_IO1_Init();
 	CARME_IO2_Init();
-	InitISR();
-	Motor_Init(20);
+	InitISR(&SemIndex,&SemChanA);
+	Motor_Init(4);
+
+
+	xTaskCreate(ControlTask, "Control", STACKSIZE_CONTROLTASK, NULL, PRIORITY_CONTROLTASK,NULL);
+	xTaskCreate(Serialtask, "Serial", 1024U, NULL, 4U, NULL);
+	xTaskCreate(PotiTask,"PotiTask",STACKSIZE_POTITASK,NULL,PRIORITY_POTITASK,NULL);
+
 	vTaskStartScheduler();
 	for (;;) {
 	}
@@ -90,16 +105,28 @@ int main(void) {
  * @brief		Blink the green LED on the CARME Module every second.
  * @param[in]	pvargs		Not used
  */
-static void GreenLEDtask(void *pvargs) {
-
+static void ControlTask(void *pvargs) {
 	portTickType xLastWakeTime = xTaskGetTickCount();
-
+	char buffer[32];
+	uint32_t localCharacterCounter;
+	uint8_t Cnt=0;
+	snprintf(buffer,sizeof(buffer),"ABCDEFGHIJKLMNOPQRSTUVWXYZ");
 	for (;;) {
-
-		CARME_LED_Green_Set();
-		vTaskDelayUntil(&xLastWakeTime, 50U / portTICK_RATE_MS);
-		CARME_LED_Green_Reset();
-		vTaskDelayUntil(&xLastWakeTime, 950U / portTICK_RATE_MS);
+		while(buffer[Cnt]!=0)
+		{
+			localCharacterCounter=(buffer[Cnt]-64)*INT_PRO_CHAR;
+			portDISABLE_INTERRUPTS();
+			CharacterCounter=localCharacterCounter;
+			portENABLE_INTERRUPTS();
+			vTaskDelayUntil(&xLastWakeTime,1000u/portTICK_RATE_MS);
+			Cnt++;
+		}
+		localCharacterCounter=35*INT_PRO_CHAR-1;
+		portDISABLE_INTERRUPTS();
+		CharacterCounter=localCharacterCounter;
+		portENABLE_INTERRUPTS();
+		vTaskDelayUntil(&xLastWakeTime, 2000U / portTICK_RATE_MS);
+		Cnt=0;
 	}
 }
 
