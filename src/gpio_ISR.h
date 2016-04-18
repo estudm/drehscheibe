@@ -11,4 +11,6 @@
 void InitISR(void);
 void MyEXTI9_5_IRQHandler(void);
 
+extern SemaphoreHandle_t SemGPIO;
+
 #endif /* GPIO_ISR_H_ */

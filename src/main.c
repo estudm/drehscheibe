@@ -63,7 +63,7 @@ static void GreenLEDtask(void *pvargs);
 static void Serialtask(void *pvargs);
 
 /*----- Data ---------------------------------------------------------------*/
-SemaphoreHandle_t SemGPIO;
+
 /*----- Implementation -----------------------------------------------------*/
 /**
  * @brief		main
@@ -78,6 +78,7 @@ int main(void) {
 	xTaskCreate(Serialtask, "Serial", 1024U, NULL, 4U, NULL);
 	CARME_IO1_Init();
 	CARME_IO2_Init();
+	InitISR();
 	Motor_Init(20);
 	vTaskStartScheduler();
 	for (;;) {

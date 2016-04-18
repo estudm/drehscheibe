@@ -1,24 +1,37 @@
-/*
- * gpio_ISR.c
- *
- *  Created on: Apr 18, 2016
- *      Author: Lukas
- */
-
-
+#include <stdio.h>					/* Standard input and output			*/
+#include <stm32f4xx.h>				/* Processor STM32F407IG				*/
+#include <carme.h>					/* CARME Module							*/
+#include <FreeRTOS.h>				/* FreeRTOS								*/
+#include <task.h>					/* FreeRTOS tasks						*/
+#include <queue.h>					/* FreeRTOS queues						*/
 #include <semphr.h>					/* FreeRTOS semaphores					*/
 #include <carme_io1.h>
+#include <carme_io2.h>
 #include "gpio_ISR.h"
+
+SemaphoreHandle_t SemGPIO;
+SemaphoreHandle_t SemRSTCNTR;
+uint8_t Counter=0;
 
 void InitISR(void) {
 	SemGPIO = xSemaphoreCreateCounting(1, 0);
+	SemRSTCNTR = xSemaphoreCreateCounting(1, 0);
 
 	EXTI_InitTypeDef EXTI_InitStructure;
 	NVIC_InitTypeDef NVIC_InitStructure;
-	/* Connect EXTI7 to C7 (Button0) */
-	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOG,EXTI_PinSource6);
+	/* Connect EXTI7 to Kanal A */
+	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOG, EXTI_PinSource6);
 	/* Configure EXTI7 line */
 	EXTI_InitStructure.EXTI_Line = EXTI_Line7;
+	EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
+	EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Rising;
+	EXTI_InitStructure.EXTI_LineCmd = ENABLE;
+	EXTI_Init(&EXTI_InitStructure);
+
+	/* Connect EXTI8 to Index */
+	SYSCFG_EXTILineConfig(EXTI_PortSourceGPIOG, EXTI_PinSource8);
+	/* Configure EXTI8 line */
+	EXTI_InitStructure.EXTI_Line = EXTI_Line8;
 	EXTI_InitStructure.EXTI_Mode = EXTI_Mode_Interrupt;
 	EXTI_InitStructure.EXTI_Trigger = EXTI_Trigger_Rising;
 	EXTI_InitStructure.EXTI_LineCmd = ENABLE;
@@ -32,12 +45,17 @@ void InitISR(void) {
 }
 
 void MyEXTI9_5_IRQHandler(void) {
-	/* Button T0 interrupt on Port C Pin ( Line ) 7 */
-	if(EXTI_GetITStatus(EXTI_Line7) != RESET)
-	{
-		if(xSemaphoreGive(SemGPIO)==pdTrue)
-		{
+	if (EXTI_GetITStatus(EXTI_Line7) != RESET) {
+		if (xSemaphoreGive(SemGPIO) == pdTRUE) {
 
 		}
+		Counter++;
+		CARME_IO1_LED_Set(Counter,0xff);
+	}
+	if (EXTI_GetITStatus(EXTI_Line8) != RESET) {
+		if (xSemaphoreGive(SemRSTCNTR) == pdTRUE) {
+
+		}
+
 	}
 }

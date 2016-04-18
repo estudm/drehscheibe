@@ -15,7 +15,7 @@
 #define PWM_HZ ( 650000 ) /* PWM counter speed */
 #define PWM_PERIOD ( 100 ) /* PWM period length */
 
-void MotorInit(uint8_t PWMvalue)
+void Motor_Init(uint8_t PWMvalue)
 {
 	uint16_t u16Prescaler;
 	TIM_TimeBaseInitTypeDef TIM_TimeBaseStruct;
