@@ -1,0 +1,43 @@
+# Own paths
+/Debug
+ 
+# Own file extensions
+.DS_Store
+desktop.ini
+*.elf.launch
+#*.ld
+*.db
+*.prefs
+#*.cproject
+#*.project
+*.settings
+*.zip
+ 
+# Specific files
+*com.atollic.truestudio.debug.hardware_device.prefs
+*language.settings.xml
+ 
+## Standard GIT entries
+ 
+# Object files
+*.o
+*.ko
+*.obj
+*.elf
+ 
+# Libraries
+*.lib
+ 
+# Shared objects (inc. Windows DLLs)
+*.dll
+*.so
+*.so.*
+*.dylib
+ 
+# Executables
+*.exe
+*.out
+*.app
+*.i*86
+*.x86_64
+*.hex
