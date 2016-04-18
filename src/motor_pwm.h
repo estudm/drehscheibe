@@ -10,4 +10,9 @@
 
 
 
+
+void Motor_Init(uint8_t PWMvalue);
+void Motor_SetDirection(uint8_t SetDirection);
+void Motor_SetPWMValue(uint8_t PWMvalue);
+
 #endif /* MOTOR_PWM_H_ */

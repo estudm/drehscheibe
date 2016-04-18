@@ -49,6 +49,11 @@
 #include <semphr.h>					/* FreeRTOS semaphores					*/
 #include <memPoolService.h>			/* Memory pool manager service			*/
 
+#include <carme_io1.h>
+#include <carme_io2.h>
+#include "gpio_ISR.h"
+#include "motor_pwm.h"
+
 /*----- Macros -------------------------------------------------------------*/
 
 /*----- Data types ---------------------------------------------------------*/
@@ -71,7 +76,9 @@ int main(void) {
 
 	xTaskCreate(GreenLEDtask, "Blinky", 200U, NULL, 4U, NULL);
 	xTaskCreate(Serialtask, "Serial", 1024U, NULL, 4U, NULL);
-
+	CARME_IO1_Init();
+	CARME_IO2_Init();
+	Motor_Init(20);
 	vTaskStartScheduler();
 	for (;;) {
 	}
