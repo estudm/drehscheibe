@@ -6,6 +6,10 @@
  */
 #include <stdio.h>					/* Standard input and output			*/
 #include <stm32f4xx.h>				/* Processor STM32F407IG				*/
+#include <FreeRTOS.h>				/* FreeRTOS								*/
+#include <task.h>					/* FreeRTOS tasks						*/
+#include <queue.h>					/* FreeRTOS queues						*/
+#include <semphr.h>					/* FreeRTOS semaphores					*/
 #include <carme.h>					/* CARME Module							*/
 #include <carme_io2.h>
 #include "motor_pwm.h"
@@ -15,7 +19,33 @@
 #define PWM_HZ ( 650000 ) /* PWM counter speed */
 #define PWM_PERIOD ( 100 ) /* PWM period length */
 
-void Motor_Init(uint8_t PWMvalue)
+static QueueHandle_t *pvMotorQueue;
+
+static void Motor_Init(uint8_t PWMvalue);
+static void Motor_SetDirection(CARME_IO2_PWM_PHASE dir);
+static void Motor_SetPWMValue(uint8_t PWMvalue);
+
+void MotorTask (void *pvargs)
+{
+	if(pvargs!=NULL)
+	{
+		pvMotorQueue=(QueueHandle_t *) pvargs;
+		Motor_Init(0);
+		for(;;)
+		{
+			Msg_Motor_t MotorMsg;
+			if(xQueueReceive(*pvMotorQueue,&MotorMsg,portMAX_DELAY)==pdTRUE)
+			{
+				Motor_SetDirection(MotorMsg.dir);
+				Motor_SetPWMValue(MotorMsg.PWMValue);
+
+			}
+
+		}
+	}
+}
+
+static void Motor_Init(uint8_t PWMvalue)
 {
 	uint16_t u16Prescaler;
 	TIM_TimeBaseInitTypeDef TIM_TimeBaseStruct;
@@ -48,7 +78,7 @@ void Motor_Init(uint8_t PWMvalue)
 
 }
 
-void Motor_SetDirection(CARME_IO2_PWM_PHASE dir)
+static void Motor_SetDirection(CARME_IO2_PWM_PHASE dir)
 {
 	if(dir==CARME_IO2_PWM_NORMAL_DIRECTION)
 	{
@@ -60,7 +90,7 @@ void Motor_SetDirection(CARME_IO2_PWM_PHASE dir)
 		CARME_IO2_PWM_Phase(CARME_IO2_PWM_OPPOSITE_DIRECTION);
 	}
 }
-void Motor_SetPWMValue(uint8_t PWMvalue)
+static void Motor_SetPWMValue(uint8_t PWMvalue)
 {
 	/* Limit value to max period */
 		if(PWMvalue > (PWM_PERIOD - 1)) {

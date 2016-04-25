@@ -27,16 +27,22 @@ void SPIInit() {
 	//SPI Channel waehlen
 	CARME_IO2_SPI_Select(CARME_IO2_nPSC1);
 }
-void SPITask(void *pvargs) {
+void SPITask(void *pvargs)
+{
 	Msg_SPI_t SPIMsg;
-	if (pvargs != NULL) {
+	SPIInit();
+	if (pvargs != NULL)
+	{
 		pvSPIQueue = (QueueHandle_t *) pvargs;
-	}
-	for (;;) {
-		if (xQueueReceive(&pvSPIQueue,&SPIMsg,portMAX_DELAY) == pdTRUE) {
-			CARME_IO2_SPI_CS_Out(0);
-			CARME_IO2_SPI_Send(SPIMsg.flashtime);
-			CARME_IO2_SPI_CS_Out(1);
+
+		for (;;)
+		{
+			if (xQueueReceive(*pvSPIQueue,&SPIMsg,portMAX_DELAY) == pdTRUE)
+			{
+				CARME_IO2_SPI_CS_Out(0);
+				CARME_IO2_SPI_Send(SPIMsg.flashtime);
+				CARME_IO2_SPI_CS_Out(1);
+			}
 		}
 	}
 

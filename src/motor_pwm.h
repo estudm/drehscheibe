@@ -9,10 +9,17 @@
 #define MOTOR_PWM_H_
 
 
+typedef struct
+{
+	uint8_t PWMValue;
+	CARME_IO2_PWM_PHASE dir;
+}Msg_Motor_t;
+#define STACKSIZE_MOTORTASK (128)
+#define PRIORITY_MOTORTASK (3)
+#define QUEUE_SIZE_MOTORTASK (3)
 
 
-void Motor_Init(uint8_t PWMvalue);
-void Motor_SetDirection(uint8_t SetDirection);
-void Motor_SetPWMValue(uint8_t PWMvalue);
+
+void MotorTask(void *pvargs);
 
 #endif /* MOTOR_PWM_H_ */

@@ -20,17 +20,20 @@
 #include <poti.h>
 #include <motor_pwm.h>
 
-void Poti_Init()
-{
-
-}
+static QueueHandle_t * pvPotiQueue;
 void PotiTask(void *pvargs)
 {
-for(;;)
-{
-	uint16_t ADCValue;
-	CARME_IO2_ADC_Get(CARME_IO2_ADC_PORT0,&ADCValue);
-	Motor_SetPWMValue(100*ADCValue/1024);
-	vTaskDelay(100);
-}
+	if(pvargs!=NULL)
+	{
+		pvPotiQueue=(QueueHandle_t *) pvargs;
+		for(;;)
+		{
+			uint16_t ADCValue;
+			Msg_Poti_t PotiMessage;
+			CARME_IO2_ADC_Get(CARME_IO2_ADC_PORT0,&ADCValue);
+			PotiMessage.PotiVal=(100*ADCValue/1024);
+			xQueueSendToBack(*pvPotiQueue,&PotiMessage,1);
+			vTaskDelay(100);
+		}
+	}
 }

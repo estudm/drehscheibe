@@ -8,10 +8,9 @@
 #ifndef SPI_H_
 #define SPI_H_
 
-void SPI_Init();
 void SPITask(void *pvargs);
 
-#define PRIORITY_SPITASK (5u)
+#define PRIORITY_SPITASK (4u)
 #define STACKSIZE_SPITASK (128)
 #define QUEUE_SIZE_SPI (3)
 

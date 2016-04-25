@@ -8,14 +8,17 @@
 #ifndef BUTTONS_H_
 #define BUTTONS_H_
 
-void Buttons_Init();
-void ButtonTask(void *pvargs);
-
-#define PRIORITY_BUTTONTASK (5u)
+#define PRIORITY_BUTTONTASK (3u)
 #define STACKSIZE_BUTTONTASK (128)
 #define QUEUE_SIZE_BUTTON (3)
 
-typedef struct {
-uint8_t ButtonStatus;} Msg_Buttons_t;
+typedef struct
+{
+	uint8_t ButtonStatus;
+} Msg_Buttons_t;
+
+void ButtonTask(void *pvargs);
+
+
 
 #endif /* BUTTONS_H_ */

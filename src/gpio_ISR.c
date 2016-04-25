@@ -9,13 +9,9 @@
 #include <carme_io2.h>
 #include "gpio_ISR.h"
 
-static SemaphoreHandle_t SemIndex;
-static SemaphoreHandle_t SemChanA;
 uint32_t CharacterCounter=0;
-void InitISR(SemaphoreHandle_t *PSemIndex,SemaphoreHandle_t *PSemChanA )
+void InitISR()
 {
-	SemChanA = *PSemChanA;
-	SemIndex = *PSemIndex;
 	EXTI_InitTypeDef EXTI_InitStructure;
 	NVIC_InitTypeDef NVIC_InitStructure;
 

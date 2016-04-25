@@ -19,19 +19,24 @@
 #include <carme_io2.h>
 #include <buttons.h>
 
-QueueHandle_t *pvButtonQueue;
+static QueueHandle_t *pvButtonQueue;
 
-void Buttons_Init() {
 
-}
 
-void ButtonTask(void *pvargs) {
+void ButtonTask(void *pvargs)
+{
 	uint8_t ButtonValue=0;
-	if(pvargs!=NULL){
+	Msg_Buttons_t ButtonMsg;
+	if(pvargs!=NULL)
+	{
 		pvButtonQueue=(QueueHandle_t *)pvargs;
-	}
-	for (;;) {
-		CARME_IO1_SWITCH_Get(&ButtonValue);
-		xQueueSend(&pvButtonQueue, &ButtonValue, portMAX_DELAY);
+
+		for (;;)
+		{
+			CARME_IO1_SWITCH_Get(&ButtonValue);
+			ButtonMsg.ButtonStatus=ButtonValue;
+			xQueueSendToBack(*pvButtonQueue, &ButtonMsg, 1);
+			vTaskDelay(100);
+		}
 	}
 }

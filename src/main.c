@@ -53,6 +53,7 @@
 #include <carme_io2.h>
 #include "gpio_ISR.h"
 #include "motor_pwm.h"
+#include "spi.h"
 #include "poti.h"
 #include "buttons.h"
 
@@ -67,12 +68,9 @@ static void ControlTask(void *pvargs);
 static void Serialtask(void *pvargs);
 
 /*----- Data ---------------------------------------------------------------*/
-
-SemaphoreHandle_t SemChanA;
-SemaphoreHandle_t SemIndex;
-
 QueueHandle_t QueueButtons;
 QueueHandle_t QueueMotor;
+QueueHandle_t QueuePoti;
 QueueHandle_t QueueSPI;
 
 uint8_t LedGPIO = 0;
@@ -87,38 +85,26 @@ int main(void) {
 	/* Ensure all priority bits are assigned as preemption priority bits. */
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4);
 
-	/* Create semaphore */
-	SemChanA = xSemaphoreCreateCounting(1, 0);
-	SemIndex = xSemaphoreCreateCounting(1, 0);
 
-	/* Create Queue */
+	/* Create Queues */
 	QueueButtons = xQueueCreate(QUEUE_SIZE_BUTTON, sizeof(Msg_Buttons_t));
+	QueuePoti=xQueueCreate(QUEUE_SIZE_POTI,sizeof(Msg_Poti_t));
+	QueueMotor=xQueueCreate(QUEUE_SIZE_MOTORTASK,sizeof(Msg_Motor_t));
+	QueueSPI=xQueueCreate(QUEUE_SIZE_SPI,sizeof(Msg_SPI_t));
 
 	CARME_IO1_Init();
 	CARME_IO2_Init();
-	InitISR(&SemIndex, &SemChanA);
-	Motor_Init(4);
+	InitISR();
 
-	xTaskCreate(ControlTask, "Control", STACKSIZE_CONTROLTASK, NULL,
-			PRIORITY_CONTROLTASK, NULL);
+	xTaskCreate(ControlTask, "Control", STACKSIZE_CONTROLTASK, NULL,PRIORITY_CONTROLTASK, NULL);
 	xTaskCreate(Serialtask, "Serial", 1024U, NULL, 4U, NULL);
-	xTaskCreate(PotiTask, "PotiTask", STACKSIZE_POTITASK, NULL,
-			PRIORITY_POTITASK, NULL);
-	xTaskCreate(ButtonTask, "ButtonTask", STACKSIZE_BUTTONTASK, NULL,
-			PRIORITY_BUTTONTASK, NULL);
-
+	xTaskCreate(PotiTask, "PotiTask", STACKSIZE_POTITASK,(void *) &QueuePoti,	PRIORITY_POTITASK, NULL);
+	xTaskCreate(ButtonTask, "ButtonTask", STACKSIZE_BUTTONTASK, (void *)&QueueButtons,PRIORITY_BUTTONTASK, NULL);
+	xTaskCreate(MotorTask, "Motor Task", STACKSIZE_MOTORTASK, (void *)&QueueMotor,PRIORITY_MOTORTASK, NULL);
+	xTaskCreate(SPITask,"SPI Task",STACKSIZE_SPITASK,(void*) &QueueSPI,PRIORITY_SPITASK,NULL);
 	vTaskStartScheduler();
 	for (;;) {
-		Msg_Buttons_t ButtonMsg;
-		if (xQueueReceive(QueueButtons,&ButtonMsg,1) == pdTRUE) {
-			if ((ButtonMsg.ButtonStatus && 0x01) != 0) {
-				LedGPIO = 0;
-				//LED mit SPI
-			} else {
-				LedGPIO = 1;
-				//LED mit GPIO
-			}
-		}
+
 	}
 	return 0;
 }
@@ -132,22 +118,82 @@ static void ControlTask(void *pvargs) {
 	char buffer[32];
 	uint32_t localCharacterCounter;
 	uint8_t Cnt = 0;
-	snprintf(buffer, sizeof(buffer), "ABCDEFGHIJKLMNOPQRSTUVWXYZ");
-	for (;;) {
-		while (buffer[Cnt] != 0) {
-			localCharacterCounter = (buffer[Cnt] - 64) * INT_PRO_CHAR;
+	snprintf(buffer, sizeof(buffer), "HALLO");
+	for (;;)
+	{
+		Msg_Buttons_t 	ButtonMsg;
+		Msg_Poti_t		PotiMsg;
+		Msg_Motor_t		MotorMsg;
+		Msg_SPI_t		SPIMsg;
+		if(xQueueReceive(QueuePoti,&PotiMsg,0)==pdTRUE)
+		{
+			MotorMsg.PWMValue=PotiMsg.PotiVal;
+			MotorMsg.dir=CARME_IO2_PWM_NORMAL_DIRECTION;
+			if(xQueueSend(QueueMotor,&MotorMsg,0)==pdTRUE)
+			{
+
+			}
+		}
+
+
+		if (xQueueReceive(QueueButtons,&ButtonMsg,0) == pdTRUE)
+		{
+			if(ButtonMsg.ButtonStatus&0x01)						//Schalter0 ein
+			{
+				SPIMsg.flashtime=ButtonMsg.ButtonStatus;		//LED On-Zeit kann mit Schalter eingestellt werden
+			}
+			else												//Schalter0 aus
+			{
+				SPIMsg.flashtime=255-255*MotorMsg.PWMValue/100;//LED On-Zeit wird durch PWM-Wert bestimmt
+			}
+			if(xQueueSend(QueueSPI,&SPIMsg,0)==pdTRUE)
+			{
+
+			}
+
+		}
+
+
+
+/* Character Handling *******************************************************************/
+		if(Cnt==0)
+		{
+			localCharacterCounter = (buffer[Cnt] - 65) * INT_PRO_CHAR+1;
 			portDISABLE_INTERRUPTS();
 			CharacterCounter = localCharacterCounter;
 			portENABLE_INTERRUPTS();
-			vTaskDelayUntil(&xLastWakeTime, 1000u / portTICK_RATE_MS);
+			xLastWakeTime=xTaskGetTickCount();
 			Cnt++;
 		}
-		localCharacterCounter = 35 * INT_PRO_CHAR - 1;
-		portDISABLE_INTERRUPTS();
-		CharacterCounter = localCharacterCounter;
-		portENABLE_INTERRUPTS();
-		vTaskDelayUntil(&xLastWakeTime, 2000U / portTICK_RATE_MS);
-		Cnt = 0;
+		else
+		{
+			if(xTaskGetTickCount()-xLastWakeTime>1000)
+			{
+
+				if (buffer[Cnt] != 0)
+				{
+					localCharacterCounter = (buffer[Cnt] - 65) * INT_PRO_CHAR+1;
+					portDISABLE_INTERRUPTS();
+					CharacterCounter = localCharacterCounter;
+					portENABLE_INTERRUPTS();
+					xLastWakeTime=xTaskGetTickCount();
+					Cnt++;
+				}
+				else
+				{
+					localCharacterCounter = 36 * INT_PRO_CHAR - 1;
+					portDISABLE_INTERRUPTS();
+					CharacterCounter = localCharacterCounter;
+					portENABLE_INTERRUPTS();
+					if(xTaskGetTickCount()-xLastWakeTime>2000)
+					{
+						Cnt = 0;
+					}
+
+				}
+			}
+		}
+		vTaskDelay(10);
 	}
 }
 
