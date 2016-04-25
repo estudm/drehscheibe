@@ -54,6 +54,7 @@
 #include "gpio_ISR.h"
 #include "motor_pwm.h"
 #include "poti.h"
+#include "buttons.h"
 
 /*----- Macros -------------------------------------------------------------*/
 #define INT_PRO_CHAR	(14)
@@ -72,6 +73,12 @@ static void Serialtask(void *pvargs);
 SemaphoreHandle_t  SemChanA;
 SemaphoreHandle_t  SemIndex;
 
+QueueHandle_t QueueButtons;
+QueueHandle_t QueueMotor;
+QueueHandle_t QueueSPI;
+
+uint8_t LedGPIO=0;
+
 /*----- Implementation -----------------------------------------------------*/
 /**
  * @brief		main
@@ -81,8 +88,13 @@ int main(void) {
 
 	/* Ensure all priority bits are assigned as preemption priority bits. */
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4);
+
+	/* Create semaphore */
 	SemChanA=xSemaphoreCreateCounting(1,0);
 	SemIndex=xSemaphoreCreateCounting(1,0);
+
+	/* Create Queue */
+	QueueButtons = xQueueCreate(QUEUE_SIZE_BUTTON, sizeof(Msg_Buttons_t));
 
 
 	CARME_IO1_Init();
@@ -94,9 +106,25 @@ int main(void) {
 	xTaskCreate(ControlTask, "Control", STACKSIZE_CONTROLTASK, NULL, PRIORITY_CONTROLTASK,NULL);
 	xTaskCreate(Serialtask, "Serial", 1024U, NULL, 4U, NULL);
 	xTaskCreate(PotiTask,"PotiTask",STACKSIZE_POTITASK,NULL,PRIORITY_POTITASK,NULL);
+	xTaskCreate(ButtonTask,"ButtonTask", STACKSIZE_BUTTONTASK,NULL, PRIORITY_BUTTONTASK, NULL);
 
 	vTaskStartScheduler();
 	for (;;) {
+		Msg_Buttons_t ButtonMsg;
+		if(xQueueReceive(*QueueButtons,&ButtonMsg,1))
+		{
+
+			if((ButtonMsg.ButtonStatus&&0x01)!=0)
+			{
+				LedGPIO=0;
+				//LED mit SPI
+			}
+			else
+			{
+				LedGPIO=1;
+				//LED mit GPIO
+			}
+		}
 	}
 	return 0;
 }

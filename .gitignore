@@ -41,3 +41,5 @@ desktop.ini
 *.i*86
 *.x86_64
 *.hex
+/Debug
+/Release
