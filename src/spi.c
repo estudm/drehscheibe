@@ -1,5 +1,5 @@
 /*
- * buttons.c
+ * spi.c
  *
  *  Created on: Apr 25, 2016
  *      Author: Lukas
@@ -14,24 +14,30 @@
 #include <queue.h>					/* FreeRTOS queues						*/
 #include <semphr.h>					/* FreeRTOS semaphores					*/
 #include <memPoolService.h>			/* Memory pool manager service			*/
+#include <spi.h>
 
 #include <carme_io1.h>
 #include <carme_io2.h>
 #include <buttons.h>
 
-QueueHandle_t *pvButtonQueue;
+QueueHandle_t *pvSPIQueue;
 
-void Buttons_Init() {
-
+void SPIInit() {
+	CARME_IO2_Init();
+	//SPI Channel waehlen
+	CARME_IO2_SPI_Select(CARME_IO2_nPSC1);
 }
-
-void ButtonTask(void *pvargs) {
-	uint8_t ButtonValue=0;
-	if(pvargs!=NULL){
-		pvButtonQueue=(QueueHandle_t *)pvargs;
+void SPITask(void *pvargs) {
+	Msg_SPI_t SPIMsg;
+	if (pvargs != NULL) {
+		pvSPIQueue = (QueueHandle_t *) pvargs;
 	}
 	for (;;) {
-		CARME_IO1_SWITCH_Get(&ButtonValue);
-		xQueueSend(&pvButtonQueue, &ButtonValue, portMAX_DELAY);
+		if (xQueueReceive(&pvSPIQueue,&SPIMsg,portMAX_DELAY) == pdTRUE) {
+			CARME_IO2_SPI_CS_Out(0);
+			CARME_IO2_SPI_Send(SPIMsg.flashtime);
+			CARME_IO2_SPI_CS_Out(1);
+		}
 	}
+
 }

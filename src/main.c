@@ -58,9 +58,7 @@
 
 /*----- Macros -------------------------------------------------------------*/
 #define INT_PRO_CHAR	(14)
-#define SPACENMBR (35)			//Zeichen Nummer 35 auf Rad ist Leerzeichen
-//#define PRESCALER (14)
-#define PRIORITY_CONTROLTASK (4)
+#define SPACENMBR (35)			//Zeichen Nummer 35 auf Rad ist Leerzeichen//#define PRESCALER (14)#define PRIORITY_CONTROLTASK (4)
 #define STACKSIZE_CONTROLTASK (128)
 /*----- Data types ---------------------------------------------------------*/
 
@@ -70,14 +68,14 @@ static void Serialtask(void *pvargs);
 
 /*----- Data ---------------------------------------------------------------*/
 
-SemaphoreHandle_t  SemChanA;
-SemaphoreHandle_t  SemIndex;
+SemaphoreHandle_t SemChanA;
+SemaphoreHandle_t SemIndex;
 
 QueueHandle_t QueueButtons;
 QueueHandle_t QueueMotor;
 QueueHandle_t QueueSPI;
 
-uint8_t LedGPIO=0;
+uint8_t LedGPIO = 0;
 
 /*----- Implementation -----------------------------------------------------*/
 /**
@@ -90,38 +88,34 @@ int main(void) {
 	NVIC_PriorityGroupConfig(NVIC_PriorityGroup_4);
 
 	/* Create semaphore */
-	SemChanA=xSemaphoreCreateCounting(1,0);
-	SemIndex=xSemaphoreCreateCounting(1,0);
+	SemChanA = xSemaphoreCreateCounting(1, 0);
+	SemIndex = xSemaphoreCreateCounting(1, 0);
 
 	/* Create Queue */
 	QueueButtons = xQueueCreate(QUEUE_SIZE_BUTTON, sizeof(Msg_Buttons_t));
 
-
 	CARME_IO1_Init();
 	CARME_IO2_Init();
-	InitISR(&SemIndex,&SemChanA);
+	InitISR(&SemIndex, &SemChanA);
 	Motor_Init(4);
 
-
-	xTaskCreate(ControlTask, "Control", STACKSIZE_CONTROLTASK, NULL, PRIORITY_CONTROLTASK,NULL);
+	xTaskCreate(ControlTask, "Control", STACKSIZE_CONTROLTASK, NULL,
+			PRIORITY_CONTROLTASK, NULL);
 	xTaskCreate(Serialtask, "Serial", 1024U, NULL, 4U, NULL);
-	xTaskCreate(PotiTask,"PotiTask",STACKSIZE_POTITASK,NULL,PRIORITY_POTITASK,NULL);
-	xTaskCreate(ButtonTask,"ButtonTask", STACKSIZE_BUTTONTASK,NULL, PRIORITY_BUTTONTASK, NULL);
+	xTaskCreate(PotiTask, "PotiTask", STACKSIZE_POTITASK, NULL,
+			PRIORITY_POTITASK, NULL);
+	xTaskCreate(ButtonTask, "ButtonTask", STACKSIZE_BUTTONTASK, NULL,
+			PRIORITY_BUTTONTASK, NULL);
 
 	vTaskStartScheduler();
 	for (;;) {
 		Msg_Buttons_t ButtonMsg;
-		if(xQueueReceive(*QueueButtons,&ButtonMsg,1))
-		{
-
-			if((ButtonMsg.ButtonStatus&&0x01)!=0)
-			{
-				LedGPIO=0;
+		if (xQueueReceive(QueueButtons,&ButtonMsg,1) == pdTRUE) {
+			if ((ButtonMsg.ButtonStatus && 0x01) != 0) {
+				LedGPIO = 0;
 				//LED mit SPI
-			}
-			else
-			{
-				LedGPIO=1;
+			} else {
+				LedGPIO = 1;
 				//LED mit GPIO
 			}
 		}
@@ -137,24 +131,23 @@ static void ControlTask(void *pvargs) {
 	portTickType xLastWakeTime = xTaskGetTickCount();
 	char buffer[32];
 	uint32_t localCharacterCounter;
-	uint8_t Cnt=0;
-	snprintf(buffer,sizeof(buffer),"ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+	uint8_t Cnt = 0;
+	snprintf(buffer, sizeof(buffer), "ABCDEFGHIJKLMNOPQRSTUVWXYZ");
 	for (;;) {
-		while(buffer[Cnt]!=0)
-		{
-			localCharacterCounter=(buffer[Cnt]-64)*INT_PRO_CHAR;
+		while (buffer[Cnt] != 0) {
+			localCharacterCounter = (buffer[Cnt] - 64) * INT_PRO_CHAR;
 			portDISABLE_INTERRUPTS();
-			CharacterCounter=localCharacterCounter;
+			CharacterCounter = localCharacterCounter;
 			portENABLE_INTERRUPTS();
-			vTaskDelayUntil(&xLastWakeTime,1000u/portTICK_RATE_MS);
+			vTaskDelayUntil(&xLastWakeTime, 1000u / portTICK_RATE_MS);
 			Cnt++;
 		}
-		localCharacterCounter=35*INT_PRO_CHAR-1;
+		localCharacterCounter = 35 * INT_PRO_CHAR - 1;
 		portDISABLE_INTERRUPTS();
-		CharacterCounter=localCharacterCounter;
+		CharacterCounter = localCharacterCounter;
 		portENABLE_INTERRUPTS();
 		vTaskDelayUntil(&xLastWakeTime, 2000U / portTICK_RATE_MS);
-		Cnt=0;
+		Cnt = 0;
 	}
 }
 
@@ -169,9 +162,9 @@ static void Serialtask(void *pvargs) {
 	USART_InitStruct.USART_BaudRate = 115200U;
 	CARME_UART_Init(CARME_UART0, &USART_InitStruct);
 	vTaskDelay(5U / portTICK_RATE_MS);
-	printf("\033c");		/* Reset to initial state	*/
-	printf("\033[2J");		/* Clear screen				*/
-	printf("\033[?25l");	/* Cursor off				*/
+	printf("\033c"); /* Reset to initial state	*/
+	printf("\033[2J"); /* Clear screen				*/
+	printf("\033[?25l"); /* Cursor off				*/
 	vTaskDelay(5 / portTICK_RATE_MS);
 
 	printf("Welcome to CARME-M4 FreeRTOS\r\n");
