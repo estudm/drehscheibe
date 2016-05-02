@@ -17,7 +17,7 @@ typedef struct
 
 }Msg_Uart_t;
 
-void USART1_IRQHandler(void);
+void MyUSART1_IRQHandler(void);
 void uart_init(QueueHandle_t *pvQueue);
 
 

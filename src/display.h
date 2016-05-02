@@ -9,7 +9,7 @@
 #define DISPLAY_H_
 
 #define PRIORITY_LCDTASK (3u)
-#define STACKSIZE_LCDTASK (128)
+#define STACKSIZE_LCDTASK (512)
 #define QUEUE_SIZE_LCD (3)
 
 typedef struct

@@ -17,7 +17,9 @@
 
 #include <carme_io1.h>
 #include <carme_io2.h>
+#include <uart.h>
 #include <rs232.h>
+#include <ctype.h>
 
 static QueueHandle_t *pvUartQueue;
 
@@ -40,7 +42,7 @@ static QueueHandle_t *pvUartQueue;
 }
 
 
-void USART1_IRQHandler(void)
+void MyUSART1_IRQHandler(void)
 {
 	static uint8_t len=0;				//Anzahl empfangene Zeichen
     uint8_t c;
@@ -64,10 +66,10 @@ void USART1_IRQHandler(void)
 			UartMsg.text[len]=0;			//Nullterminierung
 			len=0;						//Zähler zurücksetzen
 			xQueueSendToBackFromISR(*pvUartQueue,&UartMsg,&xTaskWoken);
-			portEND_SWITCHING_ISR(xTaskWoken);
+
 
 		}
-		else if ((c>=32)&&(c<=126))	 	//Wenn druckbares Zeichen empfangen wurde
+		else if ((c>=65)&&(c<=90))	 	//Wenn Grossbuchstabe
 		{
 			if(len<(UART_MAXTEXTLENGTH-1)) //Wenn maximale Stringlänge noch nicht erreicht
 			{
@@ -75,5 +77,24 @@ void USART1_IRQHandler(void)
 				USART_SendData(CARME_UART0, c);			//Empfangenes Zeichen zurücksenden
 			}
 		}
+		else if ((c>=97)&&(c<=122))	 	//Wenn druckbares Zeichen empfangen wurde
+		{
+			if(len<(UART_MAXTEXTLENGTH-1)) //Wenn maximale Stringlänge noch nicht erreicht
+			{
+				c=toupper(c);
+				UartMsg.text[len++]=c;	//Empfangenes Zeichen in String ablegen
+				USART_SendData(CARME_UART0, c);			//Empfangenes Zeichen zurücksenden
+			}
+		}
+		else if((c=='!')||(c=='?')||(c=='-')||(c=='.')||(c==',')||(c==':')||(c==';')||(c==' '))
+		{
+			if(len<(UART_MAXTEXTLENGTH-1)) //Wenn maximale Stringlänge noch nicht erreicht
+				{
+					UartMsg.text[len++]=c;	//Empfangenes Zeichen in String ablegen
+					USART_SendData(CARME_UART0, c);			//Empfangenes Zeichen zurücksenden
+				}
+		}
     }
+   // portEND_SWITCHING_ISR(xTaskWoken);
+    portYIELD_FROM_ISR(xTaskWoken);
 }
