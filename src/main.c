@@ -56,6 +56,7 @@
 #include "spi.h"
 #include "poti.h"
 #include "buttons.h"
+#include "rs232.h"
 
 /*----- Macros -------------------------------------------------------------*/
 #define INT_PRO_CHAR	(14)
@@ -65,13 +66,13 @@
 
 /*----- Function prototypes ------------------------------------------------*/
 static void ControlTask(void *pvargs);
-static void Serialtask(void *pvargs);
 
 /*----- Data ---------------------------------------------------------------*/
 QueueHandle_t QueueButtons;
 QueueHandle_t QueueMotor;
 QueueHandle_t QueuePoti;
 QueueHandle_t QueueSPI;
+QueueHandle_t QueueUart;
 
 uint8_t LedGPIO = 0;
 
@@ -91,10 +92,12 @@ int main(void) {
 	QueuePoti=xQueueCreate(QUEUE_SIZE_POTI,sizeof(Msg_Poti_t));
 	QueueMotor=xQueueCreate(QUEUE_SIZE_MOTORTASK,sizeof(Msg_Motor_t));
 	QueueSPI=xQueueCreate(QUEUE_SIZE_SPI,sizeof(Msg_SPI_t));
+	QueueUart=xQueueCreate(QUEUE_SIZE_UART,sizeof(Msg_Uart_t));
 
 	CARME_IO1_Init();
 	CARME_IO2_Init();
 	InitISR();
+	uart_init(&QueueUart);
 
 	xTaskCreate(ControlTask, "Control", STACKSIZE_CONTROLTASK, NULL,PRIORITY_CONTROLTASK, NULL);
 	xTaskCreate(Serialtask, "Serial", 1024U, NULL, 4U, NULL);
@@ -115,9 +118,10 @@ int main(void) {
  */
 static void ControlTask(void *pvargs) {
 	portTickType xLastWakeTime = xTaskGetTickCount();
-	char buffer[32];
+	char buffer[UART_MAXTEXTLENGTH];
 	uint32_t localCharacterCounter;
 	uint8_t Cnt = 0;
+	uint32_t i=0;
 	snprintf(buffer, sizeof(buffer), "HALLO");
 	for (;;)
 	{
@@ -125,6 +129,9 @@ static void ControlTask(void *pvargs) {
 		Msg_Poti_t		PotiMsg;
 		Msg_Motor_t		MotorMsg;
 		Msg_SPI_t		SPIMsg;
+		Msg_Uart_t		UartMsg;
+
+
 		if(xQueueReceive(QueuePoti,&PotiMsg,0)==pdTRUE)
 		{
 			MotorMsg.PWMValue=PotiMsg.PotiVal;
@@ -151,6 +158,15 @@ static void ControlTask(void *pvargs) {
 
 			}
 
+		}
+
+		if(xQueueReceive(QueueUart,&UartMsg,0)==pdTRUE)
+		{
+			for(i=0;i<UART_MAXTEXTLENGTH;i++)
+			{
+				buffer[i]=UartMsg.text[i];
+				Cnt=0;
+			}
 		}
 
 
@@ -197,29 +213,6 @@ static void ControlTask(void *pvargs) {
 	}
 }
 
-/**
- * @brief		Print welcome string to the standard output.
- * @param[in]	pvargs		Not used
- */
-static void Serialtask(void *pvargs) {
-
-	USART_InitTypeDef USART_InitStruct;
-	USART_StructInit(&USART_InitStruct);
-	USART_InitStruct.USART_BaudRate = 115200U;
-	CARME_UART_Init(CARME_UART0, &USART_InitStruct);
-	vTaskDelay(5U / portTICK_RATE_MS);
-	printf("\033c"); /* Reset to initial state	*/
-	printf("\033[2J"); /* Clear screen				*/
-	printf("\033[?25l"); /* Cursor off				*/
-	vTaskDelay(5 / portTICK_RATE_MS);
-
-	printf("Welcome to CARME-M4 FreeRTOS\r\n");
-	vTaskDelay(2000U / portTICK_RATE_MS);
-
-	for (;;) {
-		vTaskDelay(1000U);
-	}
-}
 
 /**
  * @}
