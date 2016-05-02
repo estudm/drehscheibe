@@ -1,8 +1,16 @@
-/*
- * buttons.c
+/**
+ *****************************************************************************
+ * @defgroup	Control_Main
+ * @{
  *
- *  Created on: Apr 25, 2016
- *      Author: Lukas
+ * @file		main.c
+ * @version		1.0
+ * @date		02.05.2016
+ * @author		kohll6, studm12
+ *
+ * @brief		Main-Source File with implemented Control Task
+ *
+ *****************************************************************************
  */
 
 #include <stdio.h>					/* Standard input and output			*/

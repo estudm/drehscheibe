@@ -8,9 +8,11 @@
 #ifndef GPIO_ISR_H_
 #define GPIO_ISR_H_
 
-void InitISR(void) ;
+/* Funktions-Prototypen */
+void gpio_init(void) ;
 void MyEXTI9_5_IRQHandler(void);
 
-extern  uint32_t CharacterCounter;
+/* Exportierte Daten*/
+extern  uint32_t ISRCharacterCounter;
 
 #endif /* GPIO_ISR_H_ */

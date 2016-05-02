@@ -1,7 +1,6 @@
 /**
  *****************************************************************************
- * @defgroup	RT-Modell
- * @brief		Project related code
+ * @defgroup	Control_Main
  * @{
  *
  * @file		main.c
@@ -9,31 +8,8 @@
  * @date		02.05.2016
  * @author		kohll6, studm12
  *
- * @brief		main.c Main-Source File, with implemented Control Task
+ * @brief		Main-Source File with implemented Control Task
  *
- *****************************************************************************
- * @copyright
- * @{
- * Copyright &copy; 2013, Bern University of Applied Sciences.
- * All rights reserved.
- *
- * ##### GNU GENERAL PUBLIC LICENSE
- *
- * This program is free software; you can redistribute it and/or
- * modify it under the terms of the GNU General Public License
- * as published by the Free Software Foundation; either version 2
- * of the License, or (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program; if not, write to the Free Software
- * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston,
- * MA  02110-1301, USA.
- * @}
  *****************************************************************************
  */
 
@@ -59,8 +35,7 @@
 #include "rs232.h"
 #include "display.h"
 /*----- Macros -------------------------------------------------------------*/
-#define INT_PRO_CHAR	(14)	//Anzahl Interrupts pro Zeichen (500 Int/U)
-#define SPACENMBR (35)			//Zeichen Nummer 35 auf Rad ist Leerzeichen#define PRIORITY_CONTROLTASK (4)
+#define INT_PRO_CHAR	(14)		/*Anzahl Interrupts pro Zeichen (500 Int/U)*/#define PRIORITY_CONTROLTASK (4)
 #define STACKSIZE_CONTROLTASK (128)
 /*----- Data types ---------------------------------------------------------*/
 
@@ -94,21 +69,23 @@ int main(void) {
 	QueueMotor=xQueueCreate(QUEUE_SIZE_MOTORTASK,sizeof(Msg_Motor_t));
 	QueueSPI=xQueueCreate(QUEUE_SIZE_SPI,sizeof(Msg_SPI_t));
 	QueueUart=xQueueCreate(QUEUE_SIZE_UART,sizeof(Msg_Uart_t));
-	QueueDisplay=xQueueCreate(QUEUE_SIZE_LCD,sizeof (Msg_LCD_t));
+	QueueDisplay=xQueueCreate(QUEUE_SIZE_DISPLAY,sizeof (Msg_Display_t));
 
+	/*Init Hardware*/
 	CARME_IO1_Init();
 	CARME_IO2_Init();
-	uart_init(&QueueUart);
-	InitISR();
+	uart_init(&QueueUart);		/*Init UART-Hardware & Interrupt*/
+	gpio_init();				/*Init GPIO-Hardware & Interrupt*/
 
-
+	/*Create Tasks*/
 	xTaskCreate(ControlTask, "Control", STACKSIZE_CONTROLTASK, NULL,PRIORITY_CONTROLTASK, NULL);
 	xTaskCreate(PotiTask, "PotiTask", STACKSIZE_POTITASK,(void *) &QueuePoti,	PRIORITY_POTITASK, NULL);
 	xTaskCreate(ButtonTask, "ButtonTask", STACKSIZE_BUTTONTASK, (void *)&QueueButtons,PRIORITY_BUTTONTASK, NULL);
 	xTaskCreate(MotorTask, "Motor Task", STACKSIZE_MOTORTASK, (void *)&QueueMotor,PRIORITY_MOTORTASK, NULL);
 	xTaskCreate(SPITask,"SPI Task",STACKSIZE_SPITASK,(void*) &QueueSPI,PRIORITY_SPITASK,NULL);
-	xTaskCreate(LCDTask, "LCD Task",STACKSIZE_LCDTASK, (void*) &QueueDisplay,PRIORITY_LCDTASK,NULL);
-	vTaskStartScheduler();
+	xTaskCreate(DisplayTask, "Display Task",STACKSIZE_DISPLAYTASK, (void*) &QueueDisplay,PRIORITY_DISPLAYTASK,NULL);
+
+	vTaskStartScheduler();		/* Start Scheduler*/
 	for (;;) {
 
 	}
@@ -116,78 +93,95 @@ int main(void) {
 }
 
 /**
- * @brief
+ * @brief 		Haupt-Task.
+ *
  * @param		pvargs not used
  */
-static void ControlTask(void *pvargs) {
-	portTickType xLastWakeTime = xTaskGetTickCount();
-	char buffer[UART_MAXTEXTLENGTH]={0};
-	uint32_t localCharacterCounter;
-	uint8_t Cnt = 0;
-	uint32_t i=0;
-	Msg_Buttons_t 	ButtonMsg;
-	Msg_Poti_t		PotiMsg;
-	Msg_Motor_t		MotorMsg;
-	Msg_SPI_t		SPIMsg;
-	Msg_Uart_t		UartMsg;
-	Msg_LCD_t		LCDMsg;
+static void ControlTask(void *pvargs)
+{
+	portTickType xLastWakeTime = xTaskGetTickCount();	/*Letzter Aufruf*/
+	char buffer[UART_MAXTEXTLENGTH]={0};				/*Buffer für Ausgabe über Modell*/
+	uint32_t localCharacterCounter;						/*Zähler für Anzahl Interrupts die erreicht werden müssen für bestimmten Buchstaben*/
+	uint8_t Cnt = 0;									/*Buchstabenzähler*/
+	uint32_t i=0;										/*Schleifenzähler*/
+
+	/* Lokale Messages*/
+	Msg_Buttons_t 	ButtonMsg;			/*Nachricht von Button-Task*/
+	Msg_Poti_t		PotiMsg;			/*Nachricht von Poti-Task*/
+	Msg_Motor_t		MotorMsg;			/*Nachricht an Motor-Task*/
+	Msg_SPI_t		SPIMsg;				/*Nachricht an SPI-Task*/
+	Msg_Uart_t		UartMsg;			/*Nachricht von UART-Interrupt*/
+	Msg_Display_t	DisplayMsg;			/*Nachricht an Display*/
 
 
+
+	/*Initialausgabe UART*/
 	snprintf(buffer, sizeof(buffer), "HALLO");
-	snprintf(LCDMsg.MsgString,sizeof(LCDMsg.MsgString),"HALLO");
+	snprintf(DisplayMsg.MsgString,sizeof(DisplayMsg.MsgString),"HALLO");
 	printf("\r\n Neuen Text eingeben (max %u Zeichen):", UART_MAXTEXTLENGTH);
 
 
 	for (;;)
 	{
+		/*Poti-Wert empfangen (alle 100ms)*/
 		if(xQueueReceive(QueuePoti,&PotiMsg,0)==pdTRUE)
 		{
-			MotorMsg.PWMValue=PotiMsg.PotiVal;
+			MotorMsg.PWMValue=PotiMsg.PotiVal;					/*Message an Motor-Task*/
 			MotorMsg.dir=CARME_IO2_PWM_NORMAL_DIRECTION;
-			LCDMsg.PotiStatus=PotiMsg.PotiVal;
-			if(xQueueSend(QueueMotor,&MotorMsg,0)==pdTRUE)
+
+			DisplayMsg.PotiStatus=PotiMsg.PotiVal;				/*Message an Display-Task*/
+
+			if(xQueueSend(QueueMotor,&MotorMsg,0)==pdTRUE)		/*Message an MotorTask senden*/
 			{
 
 			}
-			if(xQueueSend(QueueDisplay,&LCDMsg,0)==pdTRUE)
+			if(xQueueSend(QueueDisplay,&DisplayMsg,0)==pdTRUE)	/*Message an Display-Task senden*/
 			{
 
 			}
 		}
 
 
+		/*Button-Werte empfangen (alle 100ms)*/
 		if (xQueueReceive(QueueButtons,&ButtonMsg,0) == pdTRUE)
 		{
-			if(ButtonMsg.ButtonStatus)							//irgend ein schalter ein
+			if(ButtonMsg.ButtonStatus)							/*mindestens ein Schalter ein*/
 			{
-				SPIMsg.flashtime=ButtonMsg.ButtonStatus;		//LED On-Zeit kann mit Schalter eingestellt werden
+				SPIMsg.flashtime=ButtonMsg.ButtonStatus;		/*LED On-Zeit wird über Schalter-Wert bestimmt*/
 			}
-			else												//Schalter0 aus
+			else												/*Alle Schalter aus*/
 			{
-				SPIMsg.flashtime=255-255*MotorMsg.PWMValue/100;//LED On-Zeit wird durch PWM-Wert bestimmt
+				SPIMsg.flashtime=255-255*MotorMsg.PWMValue/100;	/*LED On-Zeit wird durch PWM-Wert bestimmt*/
 			}
-			LCDMsg.SwitchStatus=ButtonMsg.ButtonStatus;
-			if(xQueueSend(QueueSPI,&SPIMsg,0)==pdTRUE)
+
+			DisplayMsg.SwitchStatus=ButtonMsg.ButtonStatus;		/*Message an Display-Task*/
+
+			if(xQueueSend(QueueSPI,&SPIMsg,0)==pdTRUE)			/*LED-On-Zeiten an SPI-Task senden*/
 			{
 
 			}
-			if(xQueueSend(QueueDisplay,&LCDMsg,0)==pdTRUE)
+			if(xQueueSend(QueueDisplay,&DisplayMsg,0)==pdTRUE)	/*Message an Display-Task senden*/
 			{
 
 			}
 
 		}
 
+
+		/*UART-String empfangen*/
 		if(xQueueReceive(QueueUart,&UartMsg,0)==pdTRUE)
 		{
-			for(i=0;i<UART_MAXTEXTLENGTH;i++)
+			for(i=0;i<UART_MAXTEXTLENGTH;i++)					/*String in Buffer und LCD-Message schreiben*/
 			{
-				LCDMsg.MsgString[i]=buffer[i]=UartMsg.text[i];
+				DisplayMsg.MsgString[i]=buffer[i]=UartMsg.text[i];
 				Cnt=0;
 			}
+			/*Ausgabe UART*/
 			printf("\r\nFolgender Text wird auf Drehscheibe ausgegeben: %s",buffer);
 			printf("\r\n Neuen Text eingeben (max %u Zeichen):", UART_MAXTEXTLENGTH);
-			if(xQueueSend(QueueDisplay,&LCDMsg,0)==pdTRUE)
+
+			/*Message an LCD-Task senden*/
+			if(xQueueSend(QueueDisplay,&DisplayMsg,0)==pdTRUE)
 			{
 
 			}
@@ -197,9 +191,9 @@ static void ControlTask(void *pvargs) {
 
 /* Character Handling *******************************************************************/
 
-		if(Cnt==0)
+		if(Cnt==0)				/*Erster Buchstabe*/
 		{
-			switch(buffer[Cnt])
+			switch(buffer[Cnt])	/*Umwandeln des Charakters in die benötigte Anzahl Interrupts*/
 			{
 			case '!': localCharacterCounter = 26 * INT_PRO_CHAR + 1;break;
 			case '?': localCharacterCounter = 27 * INT_PRO_CHAR + 1;break;
@@ -211,24 +205,25 @@ static void ControlTask(void *pvargs) {
 			case ' ': localCharacterCounter = 34 * INT_PRO_CHAR + 1;break;
 			default: localCharacterCounter = (buffer[Cnt] - 65) * INT_PRO_CHAR+1;
 			}
-			portDISABLE_INTERRUPTS();
-			CharacterCounter = localCharacterCounter;
-			portENABLE_INTERRUPTS();
-			xLastWakeTime=xTaskGetTickCount();
+
+			portDISABLE_INTERRUPTS();						/*Interrupts deaktivieren*/
+			ISRCharacterCounter = localCharacterCounter;	/*Neuen Zähler für ISR schreiben*/
+			portENABLE_INTERRUPTS();						/*Interrupts aktivieren*/
+			xLastWakeTime=xTaskGetTickCount();				/*Tick-Zähler erneuern*/
 			Cnt++;
 		}
-		else
+		else		/*nicht erster Buchstabe*/
 		{
-			if(xTaskGetTickCount()-xLastWakeTime>1000)
+			if(xTaskGetTickCount()-xLastWakeTime>1000)	/*nach einer Sekunde*/
 			{
 
-				if (buffer[Cnt] != 0)
+				if (buffer[Cnt] != 0)		/*Buchstabe vorhanden, keine Nullterminierung*/
 				{
-					switch(buffer[Cnt])
+					switch(buffer[Cnt])		/*Umwandeln des Charakters in die benötigte Anzahl Interrupts*/
 					{
-					case '!': localCharacterCounter = 26 * INT_PRO_CHAR + 1;break;
-					case '?': localCharacterCounter = 27 * INT_PRO_CHAR + 1;break;
-					case '-': localCharacterCounter = 28 * INT_PRO_CHAR + 1;break;
+					case '!': localCharacterCounter = 26 * INT_PRO_CHAR + 1;break;	/*27. Zeichen auf Scheibe*/
+					case '?': localCharacterCounter = 27 * INT_PRO_CHAR + 1;break;	/*28. Zeichen auf Scheibe*/
+					case '-': localCharacterCounter = 28 * INT_PRO_CHAR + 1;break;	/*...*/
 					case '.': localCharacterCounter = 29 * INT_PRO_CHAR + 1;break;
 					case ',': localCharacterCounter = 30 * INT_PRO_CHAR + 1;break;
 					case ':': localCharacterCounter = 31 * INT_PRO_CHAR + 1;break;
@@ -236,21 +231,21 @@ static void ControlTask(void *pvargs) {
 					case ' ': localCharacterCounter = 34 * INT_PRO_CHAR + 1;break;
 					default: localCharacterCounter = (buffer[Cnt] - 65) * INT_PRO_CHAR+1;
 					}
-					portDISABLE_INTERRUPTS();
-					CharacterCounter = localCharacterCounter;
-					portENABLE_INTERRUPTS();
-					xLastWakeTime=xTaskGetTickCount();
+					portDISABLE_INTERRUPTS();					/*Interrupts deaktivieren*/
+					ISRCharacterCounter = localCharacterCounter; 	/*Neuen Zähler für ISR schreiben*/
+					portENABLE_INTERRUPTS();					/*Interrupts aktivieren*/
+					xLastWakeTime=xTaskGetTickCount();			/*Tick-Zähler erneuern*/
 					Cnt++;
 				}
-				else
+				else						/*Nullterminierung --> Text zu Ende*/
 				{
-					localCharacterCounter = 34 * INT_PRO_CHAR + 1;
+					localCharacterCounter = 34 * INT_PRO_CHAR + 1;	/*Ausgabe leerer Charakter*/
 					portDISABLE_INTERRUPTS();
-					CharacterCounter = localCharacterCounter;
+					ISRCharacterCounter = localCharacterCounter;	/*Neuen Zähler für ISR schreiben*/
 					portENABLE_INTERRUPTS();
-					if(xTaskGetTickCount()-xLastWakeTime>2000)
+					if(xTaskGetTickCount()-xLastWakeTime>2000)		/*Nach zwei Sekunden Leerzeichen-Ausgabe*/
 					{
-						Cnt = 0;
+						Cnt = 0;									/*Von vorne beginnen*/
 					}
 
 				}

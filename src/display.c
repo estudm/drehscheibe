@@ -1,8 +1,16 @@
-/*
- * lcd.c
+/**
+ *****************************************************************************
+ * @defgroup	Display-Task
+ * @{
  *
- *  Created on: May 2, 2016
- *      Author: estudm
+ * @file		display.c
+ * @version		1.0
+ * @date		02.05.2016
+ * @author		kohll6, studm12
+ *
+ * @brief		Display-Task
+ *
+ *****************************************************************************
  */
 #include <stdio.h>					/* Standard input and output			*/
 #include <stm32f4xx.h>				/* Processor STM32F407IG				*/
@@ -19,11 +27,14 @@
 #include "lcd.h"
 #include <display.h>
 
-
+/*Pointer auf QueueHandle*/
 static QueueHandle_t *pvLCDQueue;
 
-void LCDTask(void *pvargs) {
-	Msg_LCD_t LCDMsg;
+/**
+ *
+ */
+void DisplayTask(void *pvargs) {
+	Msg_Display_t LCDMsg;
 	char PotiString[32];
 	char SwitchString[64];
 	char WordString[32];
@@ -42,12 +53,12 @@ void LCDTask(void *pvargs) {
 				if(LCDMsg.SwitchStatus==0)
 				{
 					Beleuchtung=(255-255*LCDMsg.PotiStatus/100)*0.25+0.25;
-					snprintf(SwitchString, sizeof(SwitchString), "Blitzdauer: %02u us (Direkt /  Poti)",(uint32_t) Beleuchtung);
+					snprintf(SwitchString, sizeof(SwitchString), "Blitzdauer: %02lu us (Direkt /  Poti)",(uint32_t) Beleuchtung);
 				}
 				else
 				{
 					Beleuchtung=(0.25*LCDMsg.SwitchStatus)+0.25;
-					snprintf(SwitchString, sizeof(SwitchString), "Blitzdauer: %02u us (Direkt / Schalter)",(uint32_t) Beleuchtung);
+					snprintf(SwitchString, sizeof(SwitchString), "Blitzdauer: %02lu us (Direkt / Schalter)",(uint32_t) Beleuchtung);
 				}
 				snprintf(WordString, 32, "Ausgabe: %s", LCDMsg.MsgString);
 
@@ -61,4 +72,6 @@ void LCDTask(void *pvargs) {
 		}
 	}
 }
-
+/**
+ * @}
+ */

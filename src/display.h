@@ -8,17 +8,17 @@
 #ifndef DISPLAY_H_
 #define DISPLAY_H_
 
-#define PRIORITY_LCDTASK (3u)
-#define STACKSIZE_LCDTASK (512)
-#define QUEUE_SIZE_LCD (3)
+#define PRIORITY_DISPLAYTASK (3u)
+#define STACKSIZE_DISPLAYTASK (512)
+#define QUEUE_SIZE_DISPLAY (3)
 
 typedef struct
 {
 	uint8_t SwitchStatus;
 	uint16_t PotiStatus;
 	char MsgString[32];
-} Msg_LCD_t;
+} Msg_Display_t;
 
-void LCDTask(void *pvargs);
+void DisplayTask(void *pvargs);
 
 #endif /* LCD_H_ */

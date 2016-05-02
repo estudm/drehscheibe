@@ -1,3 +1,19 @@
+/**
+ *****************************************************************************
+ * @defgroup	GPIO-Interrupts
+ * @{
+ *
+ * @file		gpio_ISR.c
+ * @version		1.0
+ * @date		02.05.2016
+ * @author		kohll6, studm12
+ *
+ * @brief		Interruptroutine für Index und Kanal A
+ *
+ *****************************************************************************
+ */
+
+
 #include <stdio.h>					/* Standard input and output			*/
 #include <stm32f4xx.h>				/* Processor STM32F407IG				*/
 #include <carme.h>					/* CARME Module							*/
@@ -9,8 +25,16 @@
 #include <carme_io2.h>
 #include "gpio_ISR.h"
 
-uint32_t CharacterCounter=0;
-void InitISR()
+
+/*Anzahl Interrupts bis LED eingeschaltet wird.
+  Wird von Control-Task aus gesezt*/
+uint32_t ISRCharacterCounter=0;
+
+
+/**
+ * @brief Initialisiert Interrupts für Index und Kanal A.
+ */
+void gpio_init()
 {
 	EXTI_InitTypeDef EXTI_InitStructure;
 	NVIC_InitTypeDef NVIC_InitStructure;
@@ -44,25 +68,31 @@ void InitISR()
 }
 
 
-
+/**
+ * @brief Kanal-A & Index Interrupt
+ */
 void MyEXTI9_5_IRQHandler(void) {
-	static uint32_t Cnt=0;
+	static uint32_t Cnt=0;	/*Zählervariable*/
+
 	/*Index Interrupt*/
-	if (EXTI_GetITStatus(EXTI_Line8) != RESET) {
-
-		Cnt=0;
-		/* Clear Interrupt and call Interrupt Service Routine */
-		EXTI_ClearITPendingBit (EXTI_Line8) ;
-
+	if (EXTI_GetITStatus(EXTI_Line8) != RESET)
+	{
+		Cnt=0;				/* Zähler zurücksetzen */
+		EXTI_ClearITPendingBit (EXTI_Line8) ;/* Clear Interrupt*/
 	}
+
 	/*Kanal A Interrupt */
 	if (EXTI_GetITStatus(EXTI_Line6) != RESET) {
-
-		if(++Cnt==CharacterCounter)
+		/*Zähler hat Sollzustand erreicht*/
+		if(++Cnt==ISRCharacterCounter)
 			{
-				CARME_IO2_GPIO_OUT_Set(0x01);
-				CARME_IO2_GPIO_OUT_Set(0x00);
+				CARME_IO2_GPIO_OUT_Set(0x01);	/* LED einschalten*/
+				CARME_IO2_GPIO_OUT_Set(0x00);	/* LED ausschalten */
 			}
-			EXTI_ClearITPendingBit (EXTI_Line6) ;
+			EXTI_ClearITPendingBit (EXTI_Line6) ;	/*Clear Interrupt*/
 		}
 }
+
+/**
+ * @}
+ */

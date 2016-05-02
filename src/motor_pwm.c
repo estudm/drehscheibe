@@ -1,8 +1,16 @@
-/*
- * motor_pwm.c
+/**
+ *****************************************************************************
+ * @defgroup	Motor
+ * @{
  *
- *  Created on: Apr 18, 2016
- *      Author: estudm
+ * @file		main.c
+ * @version		1.0
+ * @date		02.05.2016
+ * @author		kohll6, studm12
+ *
+ * @brief		Motor-Task und Funktionen zur Steuerung des Motors.
+ *
+ *****************************************************************************
  */
 #include <stdio.h>					/* Standard input and output			*/
 #include <stm32f4xx.h>				/* Processor STM32F407IG				*/
@@ -16,27 +24,34 @@
 
 
 
-#define PWM_HZ ( 650000 ) /* PWM counter speed */
-#define PWM_PERIOD ( 100 ) /* PWM period length */
+#define PWM_HZ ( 650000 ) 			/* PWM counter speed */
+#define PWM_PERIOD ( 100 ) 			/* PWM period length */
 
-static QueueHandle_t *pvMotorQueue;
+static QueueHandle_t *pvMotorQueue; /* Pointer auf Queue-Handle*/
 
 static void Motor_Init(uint8_t PWMvalue);
 static void Motor_SetDirection(CARME_IO2_PWM_PHASE dir);
 static void Motor_SetPWMValue(uint8_t PWMvalue);
 
+
+/**
+ * @brief Task zur Steuerung des Motors
+ * @param pvargs Pointer auf Handle der zu verwendenden MessageQueue
+ */
 void MotorTask (void *pvargs)
 {
-	if(pvargs!=NULL)
+	if(pvargs!=NULL)	/*Parameter vorhanden*/
 	{
-		pvMotorQueue=(QueueHandle_t *) pvargs;
-		Motor_Init(0);
+		pvMotorQueue=(QueueHandle_t *) pvargs;	/*QueueHandle setzen*/
+		Motor_Init(0);							/*PWM initialisieren*/
 		for(;;)
 		{
-			Msg_Motor_t MotorMsg;
+			Msg_Motor_t MotorMsg;				/*Lokale Message*/
+
+			/*Message empfangen*/
 			if(xQueueReceive(*pvMotorQueue,&MotorMsg,portMAX_DELAY)==pdTRUE)
 			{
-				Motor_SetDirection(MotorMsg.dir);
+				Motor_SetDirection(MotorMsg.dir);		/*Neue Motoreinstellungen schreiben*/
 				Motor_SetPWMValue(MotorMsg.PWMValue);
 
 			}
@@ -45,6 +60,11 @@ void MotorTask (void *pvargs)
 	}
 }
 
+
+/**
+ * @brief Initialisiert das PWM-Modul und startet den Motor mit gewünschtem PWM-Wert
+ * @param PWMvalue PWM-Impulsdauer in % [0..100]
+ */
 static void Motor_Init(uint8_t PWMvalue)
 {
 	uint16_t u16Prescaler;
@@ -78,6 +98,11 @@ static void Motor_Init(uint8_t PWMvalue)
 
 }
 
+
+/**
+ * @brief Stellt Drehrichtung des Motors ein
+ * @param dir Normale oder inverse Drehrichtuung
+ */
 static void Motor_SetDirection(CARME_IO2_PWM_PHASE dir)
 {
 	if(dir==CARME_IO2_PWM_NORMAL_DIRECTION)
@@ -90,6 +115,11 @@ static void Motor_SetDirection(CARME_IO2_PWM_PHASE dir)
 		CARME_IO2_PWM_Phase(CARME_IO2_PWM_OPPOSITE_DIRECTION);
 	}
 }
+
+/**
+ * @brief Ändert Drehgeschwindigkeit des Motors
+ * @param PWMvalue Drehgeschwindigkeit in % [0..100]
+ */
 static void Motor_SetPWMValue(uint8_t PWMvalue)
 {
 	/* Limit value to max period */
@@ -99,3 +129,7 @@ static void Motor_SetPWMValue(uint8_t PWMvalue)
 		CARME_IO2_PWM_Set(CARME_IO2_PWM3, PWMvalue);
 }
 
+
+/**
+ * @}
+ */
