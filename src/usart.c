@@ -3,12 +3,12 @@
  * @defgroup	UART-Interrupt
  * @{
  *
- * @file		rs232.c
+ * @file		usart.c
  * @version		1.0
  * @date		02.05.2016
  * @author		kohll6, studm12
  *
- * @brief		UART Receiv-interrupt
+ * @brief		UART Receive-interrupt
  *
  *****************************************************************************
  */
@@ -26,7 +26,7 @@
 #include <carme_io1.h>
 #include <carme_io2.h>
 #include <uart.h>
-#include <uart.h>
+#include <usart.h>
 #include <ctype.h>
 
 /* POinter auf QueueHandle*/

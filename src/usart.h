@@ -3,7 +3,7 @@
  * @defgroup	UART-Interrupt
  * @{
  *
- * @file		uart.h
+ * @file		usart.h
  * @version		1.0
  * @date		02.05.2016
  * @author		kohll6, studm12
@@ -36,3 +36,6 @@ void uart_init(QueueHandle_t *pvQueue);
 
 
 #endif /* RS232_H_ */
+/**
+ * @}
+ */

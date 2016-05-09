@@ -27,12 +27,12 @@
 
 #include <carme_io1.h>
 #include <carme_io2.h>
-#include "gpio_ISR.h"
+#include "gpio.h"
 #include "motor_pwm.h"
 #include "spi.h"
 #include "poti.h"
 #include "buttons.h"
-#include "rs232.h"
+#include "usart.h"
 #include "display.h"
 /*----- Interrupt Settings -------------------------------------------------*/
 #define INT_PRO_CHAR	(14)		/*Anzahl Interrupts pro Zeichen (500 Int/U)*/
