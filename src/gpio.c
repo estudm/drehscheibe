@@ -3,7 +3,7 @@
  * @defgroup	GPIO-Interrupts
  * @{
  *
- * @file		gpio_ISR.c
+ * @file		gpio.c
  * @version		1.0
  * @date		02.05.2016
  * @author		kohll6, studm12
@@ -21,9 +21,9 @@
 #include <task.h>					/* FreeRTOS tasks						*/
 #include <queue.h>					/* FreeRTOS queues						*/
 #include <semphr.h>					/* FreeRTOS semaphores					*/
-#include <carme_io1.h>
-#include <carme_io2.h>
-#include "gpio_ISR.h"
+#include <carme_io1.h>				/* CARME IO1 access functions			*/
+#include <carme_io2.h>				/* CARME IO2
+#include "gpio.h"
 
 
 /*Anzahl Interrupts bis LED eingeschaltet wird.

@@ -1,8 +1,16 @@
-/*
- * motor_pwm.h
+/**
+ *****************************************************************************
+ * @defgroup	Motor
+ * @{
  *
- *  Created on: Apr 18, 2016
- *      Author: estudm
+ * @file		motor_pwm.h
+ * @version		1.0
+ * @date		02.05.2016
+ * @author		kohll6, studm12
+ *
+ * @brief		Motor-Task und Funktionen zur Steuerung des Motors.
+ *
+ *****************************************************************************
  */
 
 #ifndef MOTOR_PWM_H_
@@ -28,3 +36,6 @@ typedef struct
 void MotorTask(void *pvargs);
 
 #endif /* MOTOR_PWM_H_ */
+/**
+ * @}
+ */

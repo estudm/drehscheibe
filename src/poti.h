@@ -1,9 +1,17 @@
-/*
- * poti.h
+/**
+ *****************************************************************************
+ * @defgroup	Poti
+ * @{
  *
- *  Created on: Apr 18, 2016
- *      Author: estudm
- */
+ * @file		poti.h
+ * @version		1.0
+ * @date		02.05.2016
+ * @author		kohll6, studm12
+ *
+ * @brief		Poti-Task
+ *
+ *****************************************************************************
+*/
 
 #ifndef POTI_H_
 #define POTI_H_
@@ -26,3 +34,6 @@ void PotiTask(void *pvargs);
 
 
 #endif /* POTI_H_ */
+/**
+ * @}
+ */

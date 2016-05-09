@@ -8,7 +8,7 @@
  * @date		02.05.2016
  * @author		kohll6, studm12
  *
- * @brief		Main-Source File with implemented Control Task
+ * @brief		Main-Sourcefile mit Control-Task
  *
  *****************************************************************************
  */
@@ -34,25 +34,26 @@
 #include "buttons.h"
 #include "rs232.h"
 #include "display.h"
-/*----- Macros -------------------------------------------------------------*/
-#define INT_PRO_CHAR	(14)		/*Anzahl Interrupts pro Zeichen (500 Int/U)*/#define PRIORITY_CONTROLTASK (4)
+/*----- Interrupt Settings -------------------------------------------------*/
+#define INT_PRO_CHAR	(14)		/*Anzahl Interrupts pro Zeichen (500 Int/U)*/
+
+/*----- Task Settings ------------------------------------------------------*/#define PRIORITY_CONTROLTASK (4)
 #define STACKSIZE_CONTROLTASK (128)
-/*----- Data types ---------------------------------------------------------*/
 
 /*----- Function prototypes ------------------------------------------------*/
 static void ControlTask(void *pvargs);
 
-/*----- Data ---------------------------------------------------------------*/
-QueueHandle_t QueueButtons;
-QueueHandle_t QueueMotor;
-QueueHandle_t QueuePoti;
-QueueHandle_t QueueSPI;
-QueueHandle_t QueueUart;
-QueueHandle_t QueueDisplay;
+/*----- Queue-Handles ------------------------------------------------------*/
+QueueHandle_t QueueButtons;	/* Nachricht von Button-Task 	*/
+QueueHandle_t QueueMotor;	/* Nachricht an Motor-Task 		*/
+QueueHandle_t QueuePoti;	/* Nachricht von Poti-Task 		*/
+QueueHandle_t QueueSPI;		/* Nachricht an SPI-Task 		*/
+QueueHandle_t QueueUart;	/* Nachricht von UART-Interrupt	*/
+QueueHandle_t QueueDisplay; /* Nachricht an Display-Task 	*/
 
-uint8_t LedGPIO = 0;
 
 /*----- Implementation -----------------------------------------------------*/
+
 /**
  * @brief		main
  * @return		0 if success

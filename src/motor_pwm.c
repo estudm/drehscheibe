@@ -3,7 +3,7 @@
  * @defgroup	Motor
  * @{
  *
- * @file		main.c
+ * @file		motor_pwm.c
  * @version		1.0
  * @date		02.05.2016
  * @author		kohll6, studm12

@@ -26,7 +26,7 @@
 #include <carme_io1.h>
 #include <carme_io2.h>
 #include <uart.h>
-#include <rs232.h>
+#include <uart.h>
 #include <ctype.h>
 
 /* POinter auf QueueHandle*/

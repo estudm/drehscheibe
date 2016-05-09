@@ -1,8 +1,16 @@
-/*
- * rs232.h
+/**
+ *****************************************************************************
+ * @defgroup	UART-Interrupt
+ * @{
  *
- *  Created on: May 2, 2016
- *      Author: estudm
+ * @file		uart.h
+ * @version		1.0
+ * @date		02.05.2016
+ * @author		kohll6, studm12
+ *
+ * @brief		UART Receiv-interrupt
+ *
+ *****************************************************************************
  */
 
 #ifndef RS232_H_
